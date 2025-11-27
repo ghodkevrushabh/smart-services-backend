@@ -1,0 +1,34 @@
+# --- Dependencies (The Heavy Stuff) ---
+node_modules/
+**/node_modules/
+backend_api/node_modules/
+dist/
+npm-debug.log
+
+# --- Python ---
+__pycache__/
+*.pyc
+venv/
+env/
+ai_engine/venv/
+ai_engine/env/
+
+# --- Flutter/Mobile ---
+build/
+**/build/
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+
+# --- Secrets (Crucial) ---
+.env
+*.env
+backend_api/.env
+
+# --- VS Code / Mac / Windows Junk ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
