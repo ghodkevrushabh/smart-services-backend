@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'worker_home_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,8 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  
+  // NEW: Track password visibility
+  bool _isPasswordVisible = false;
 
   void _handleLogin() async {
+    if (_emailController.text.isEmpty || _passController.text.isEmpty) return;
+
     setState(() => _isLoading = true);
     
     final success = await _authService.login(
@@ -43,11 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Login Failed"),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text("Login Failed"), backgroundColor: Colors.red),
         );
       }
     }
@@ -55,6 +57,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -64,41 +69,30 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. BRANDING
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: colorScheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.handyman_rounded, 
-                      size: 60, 
-                      color: Theme.of(context).colorScheme.primary
+                      size: 50, 
+                      color: colorScheme.primary
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 40),
                 
-                // 2. WELCOME TEXT
-                Text(
-                  "Welcome Back!",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text("Welcome Back", style: textTheme.headlineMedium),
                 const SizedBox(height: 8),
                 Text(
-                  "Login to access professional services nearby.",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+                  "Please login to your account to continue booking services.",
+                  style: textTheme.bodyLarge,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
-                // 3. INPUTS
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -108,39 +102,62 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                
+                // PASSWORD FIELD WITH EYE ICON
                 TextField(
                   controller: _passController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: !_isPasswordVisible, // Toggles dots vs text
+                  decoration: InputDecoration(
                     labelText: "Password",
-                    prefixIcon: Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
                   ),
                 ),
                 
-                // 4. FORGOT PASS?
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {},
-                    child: const Text("Forgot Password?"),
+                    child: Text(
+                      "Forgot Password?", 
+                      style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w600)
+                    ),
                   ),
                 ),
                 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                // 5. LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     child: _isLoading 
-                      ? const SizedBox(
-                          height: 20, 
-                          width: 20, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                        ) 
-                      : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text("Login"),
                   ),
+                ),
+
+                const SizedBox(height: 24),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Don't have an account?", style: textTheme.bodyMedium),
+                    TextButton(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUpScreen())),
+                      child: Text("Sign Up", style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -47,4 +47,26 @@ class AuthService {
       return false;
     }
   }
+  //Registration Function
+  Future<bool> register(String email, String password, String role) async {
+    final url = Uri.parse('${AppConstants.baseUrl}/users'); // POST /users creates a user
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email, 
+          'password': password,
+          'role': role // 'CUSTOMER' or 'WORKER'
+        }),
+      );
+
+      // 201 Created means success
+      return response.statusCode == 201;
+    } catch (e) {
+      print("Registration Error: $e");
+      return false;
+    }
+  }
 }

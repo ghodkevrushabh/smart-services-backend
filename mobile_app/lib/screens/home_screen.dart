@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // Animations
-import 'package:google_nav_bar/google_nav_bar.dart'; // Bottom Bar
-import 'package:line_icons/line_icons.dart'; // Icons
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:line_icons/line_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/location_service.dart'; // Location Logic
+import '../services/location_service.dart';
 import 'login_screen.dart';
 import 'provider_list_screen.dart';
 import 'my_bookings_screen.dart';
+import 'edit_profile_screen.dart';
+import 'nearby_map_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Page Controller for the 3D Carousel
   final PageController _pageController = PageController(viewportFraction: 0.75);
   int _currentPage = 0;
   int _selectedIndex = 0;
-  
-  // Location State
   String _currentAddress = "Locating...";
   String _currentCity = "Unknown";
 
@@ -31,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _initLocation();
   }
 
-  // 1. Get Real Location
   Future<void> _initLocation() async {
     final locationService = LocationService();
     final locationData = await locationService.getCurrentLocation();
@@ -43,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // YOUR LOCAL ASSETS (Styled for Pro UI)
+  // REMOVED COLORS/PRICES FROM DATA
   final List<Map<String, dynamic>> services = [
     {"name": "Plumber", "path": "assets/images/plumber.jpeg", "color": Color(0xFFE3F2FD), "dark": Colors.blue},
     {"name": "Electrician", "path": "assets/images/electrician.jpg", "color": Color(0xFFFFF8E1), "dark": Colors.orange},
@@ -56,27 +53,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    if (mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-    }
+    if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
-  // Bottom Nav Logic
   void _onTabChange(int index) {
     setState(() => _selectedIndex = index);
-    if (index == 2) {
-      Navigator.push(context, MaterialPageRoute(builder: (ctx) => const MyBookingsScreen()));
-    } else if (index == 3) {
-      _logout(context);
-    }
+    if (index == 1) Navigator.push(context, MaterialPageRoute(builder: (ctx) => const NearbyMapScreen()));
+    else if (index == 2) Navigator.push(context, MaterialPageRoute(builder: (ctx) => const MyBookingsScreen()));
+    else if (index == 3) Navigator.push(context, MaterialPageRoute(builder: (ctx) => const EditProfileScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      
-      // 1. MODERN APP BAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -88,68 +78,56 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Icon(Icons.location_on, color: Colors.red, size: 16),
                 const SizedBox(width: 4),
-                Text(_currentAddress, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(_currentAddress.split(',')[0], style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
               ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black, size: 28),
-            onPressed: () {},
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            onPressed: () => _logout(context),
           ),
         ],
       ),
 
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: const Text("Find your\nService Expert", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2)).animate().fadeIn().slideX(),
+          ),
+          const SizedBox(height: 30),
 
-            // 2. BIG TITLE
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                "What service do\nyou need today?",
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2),
-              ),
-            ).animate().fadeIn(delay: 200.ms).slideX(),
-
-            const SizedBox(height: 30),
-            
-
-            // 4. THE 3D CAROUSEL (Replaces the Grid)
-            SizedBox(
-              height: 420, 
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: services.length,
-                onPageChanged: (index) => setState(() => _currentPage = index),
-                itemBuilder: (context, index) {
-                  double scale = _currentPage == index ? 1.0 : 0.85;
-                  return TweenAnimationBuilder(
-                    tween: Tween(begin: scale, end: scale),
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeOutBack,
-                    builder: (context, double value, child) {
-                      return Transform.scale(scale: value, child: child);
-                    },
-                    child: _Service3DCard(
-                      service: services[index],
-                      userCity: _currentCity, // Keeps Geo-Filtering Logic!
-                    ),
-                  );
-                },
-              ),
-            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-            
-            const SizedBox(height: 50),
-          ],
-        ),
+          // 3D CAROUSEL (Cleaned)
+          SizedBox(
+            height: 420, 
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: services.length,
+              onPageChanged: (index) => setState(() => _currentPage = index),
+              itemBuilder: (context, index) {
+                double scale = _currentPage == index ? 1.0 : 0.85;
+                return TweenAnimationBuilder(
+                  tween: Tween(begin: scale, end: scale),
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutBack,
+                  builder: (context, double value, child) {
+                    return Transform.scale(scale: value, child: child);
+                  },
+                  child: _ServiceCard3D(
+                    service: services[index],
+                    userCity: _currentCity,
+                  ),
+                );
+              },
+            ),
+          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+        ],
       ),
 
-      // 5. GOOGLE STYLE BOTTOM NAV (Preserved)
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -170,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.grey[500],
               tabs: const [
                 GButton(icon: LineIcons.home, text: 'Home'),
-                GButton(icon: LineIcons.heart, text: 'Likes'),
+                GButton(icon: LineIcons.mapMarker, text: 'Nearby'),
                 GButton(icon: LineIcons.calendar, text: 'Bookings'),
                 GButton(icon: LineIcons.user, text: 'Profile'),
               ],
@@ -184,12 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- THE 3D CARD WIDGET ---
-class _Service3DCard extends StatelessWidget {
+class _ServiceCard3D extends StatelessWidget {
   final Map<String, dynamic> service;
   final String userCity;
 
-  const _Service3DCard({required this.service, required this.userCity});
+  const _ServiceCard3D({required this.service, required this.userCity});
 
   @override
   Widget build(BuildContext context) {
@@ -204,24 +181,17 @@ class _Service3DCard extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 30),
+        margin: const EdgeInsets.fromLTRB(10, 0, 10, 30),
         decoration: BoxDecoration(
           color: service['color'],
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(
-              color: (service['dark'] as Color).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 15),
-            ),
+            BoxShadow(color: (service['dark'] as Color).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 15)),
           ],
         ),
         child: Stack(
           children: [
-            Positioned(
-              right: -30, top: -30,
-              child: CircleAvatar(radius: 100, backgroundColor: Colors.white.withOpacity(0.3)),
-            ),
+            Positioned(right: -30, top: -30, child: CircleAvatar(radius: 100, backgroundColor: Colors.white.withOpacity(0.3))),
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -229,10 +199,11 @@ class _Service3DCard extends StatelessWidget {
                 children: [
                   Text(service['name'], style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 8),
+                  // REMOVED PRICE TAG, Added "View Pros"
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                    child: Text("Start ₹499", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: service['dark'])),
+                    child: Text("View Experts", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: service['dark'])),
                   ),
                 ],
               ),
@@ -243,10 +214,6 @@ class _Service3DCard extends StatelessWidget {
                 tag: service['name'],
                 child: Image.asset(service['path'], fit: BoxFit.contain),
               ),
-            ),
-            Positioned(
-              bottom: 24, right: 24,
-              child: CircleAvatar(backgroundColor: Colors.black, radius: 28, child: const Icon(Icons.arrow_forward, color: Colors.white)),
             ),
           ],
         ),

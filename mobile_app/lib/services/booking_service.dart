@@ -114,4 +114,54 @@ class BookingService {
       return false;
     }
   }
+
+  // Update User Profile
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    final userId = prefs.getInt('user_id');
+
+    final url = Uri.parse('${AppConstants.baseUrl}/users/$userId'); // PATCH /users/1
+
+    try {
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+  // NEW: Fetch User Details (For Profile Page)
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    final userId = prefs.getInt('user_id');
+
+    if (userId == null) return null;
+
+    final url = Uri.parse('${AppConstants.baseUrl}/users/$userId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print("Error fetching profile: $e");
+    }
+    return null;
+  }
 }

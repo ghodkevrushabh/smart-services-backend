@@ -13,7 +13,7 @@ class ProviderService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
-   try {
+    try {
       final response = await http.get(
         url,
         headers: {
