@@ -23,8 +23,12 @@ export class UsersController {
   }
 
  @Get('role/:role')
-  findByRole(@Param('role') role: string, @Query('city') city?: string) {
-    return this.usersService.findByRole(role, city);
+  findByRole(
+    @Param('role') role: string, 
+    @Query('city') city?: string,
+    @Query('category') category?: string // NEW PARAMETER
+  ) {
+    return this.usersService.findByRole(role, city, category);
   }
 
   @Patch(':id')

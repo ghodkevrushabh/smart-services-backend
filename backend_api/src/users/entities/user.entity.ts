@@ -15,6 +15,9 @@ export class User {
   role: string;
 
   @Column({ nullable: true })
+  service_category: string;
+
+  @Column({ nullable: true })
   phone: string;
 
   // --- NEW PROFILE FIELDS (Make sure these have @Column!) ---

@@ -44,19 +44,18 @@ export class UsersService {
   }
 
   // MODIFIED: Find workers in a specific city
-  findByRole(role: string, city?: string) {
+  findByRole(role: string, city?: string, category?: string) {
     const query: any = { role: role };
+    
     if (city && city !== 'Unknown') {
       query.city = city;
     }
-    return this.usersRepository.find({ where: query });
-  }
-  
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return this.usersRepository.update(id, updateUserDto);
-  }
+    
+    // NEW: Filter by Service Category (e.g., "Maid")
+    if (category) {
+      query.service_category = category;
+    }
 
-  remove(id: number) {
-    return this.usersRepository.delete(id);
+    return this.usersRepository.find({ where: query });
   }
 }
