@@ -4,7 +4,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import * as bcrypt from 'bcrypt'; // Import the encryption tool
 
 @Injectable()
 export class UsersService {
@@ -13,37 +12,22 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  // NEW: Update the token in DB
-  async updateToken(id: number, token: string) {
-    return this.usersRepository.update(id, { fcm_token: token });
+  // 1. Create User
+  create(createUserDto: CreateUserDto) {
+    return this.usersRepository.save(createUserDto);
   }
 
-  async create(createUserDto: CreateUserDto) {
-    // 1. Generate a "Salt" (Random data to make encryption unique)
-    const salt = await bcrypt.genSalt();
-
-    // 2. Encrypt the password
-    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-
-    // 3. Replace the plain password with the hashed one
-    const secureUser = {
-      ...createUserDto,
-      password: hashedPassword,
-    };
-
-    // 4. Save the SECURE user to the database
-    return this.usersRepository.save(secureUser);
-  }
-
+  // 2. Find All Users
   findAll() {
     return this.usersRepository.find();
   }
 
+  // 3. Find One User by ID
   findOne(id: number) {
     return this.usersRepository.findOneBy({ id });
   }
 
-  // MODIFIED: Find workers in a specific city
+  // 4. Find by Role (With City & Category Filters)
   findByRole(role: string, city?: string, category?: string) {
     const query: any = { role: role };
     
@@ -51,11 +35,25 @@ export class UsersService {
       query.city = city;
     }
     
-    // NEW: Filter by Service Category (e.g., "Maid")
     if (category) {
       query.service_category = category;
     }
 
     return this.usersRepository.find({ where: query });
+  }
+
+  // 5. Update User (THIS WAS MISSING)
+  update(id: number, updateUserDto: UpdateUserDto) {
+    return this.usersRepository.update(id, updateUserDto);
+  }
+
+  // 6. Remove User (THIS WAS MISSING)
+  remove(id: number) {
+    return this.usersRepository.delete(id);
+  }
+
+  // 7. Update FCM Token (For Notifications)
+  async updateToken(id: number, token: string) {
+    return this.usersRepository.update(id, { fcm_token: token });
   }
 }
