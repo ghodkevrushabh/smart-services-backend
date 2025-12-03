@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../services/provider_service.dart';
 import '../services/booking_service.dart';
 import '../services/payment_service.dart';
@@ -7,9 +8,15 @@ import 'provider_portfolio_screen.dart';
 
 class ProviderListScreen extends StatefulWidget {
   final String categoryName;
-  final String city; // Added City
+  // REMOVED: final String city; (No longer needed, we use GPS)
+  final int bookingFee; 
 
-  const ProviderListScreen({super.key, required this.categoryName, required this.city});
+  const ProviderListScreen({
+    super.key, 
+    required this.categoryName, 
+    // REMOVED: required this.city,
+    required this.bookingFee 
+  });
 
   @override
   State<ProviderListScreen> createState() => _ProviderListScreenState();
@@ -19,18 +26,17 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
   final _providerService = ProviderService();
   late Future<List<dynamic>> _providersFuture;
   late PaymentService _paymentService;
-  
-  // Standard Pricing (Since AI is removed)
-  final int _standardPrice = 499;
 
   @override
   void initState() {
     super.initState();
-    _providersFuture = _providerService.getProvidersByRole(widget.categoryName, widget.city);
+    // UPDATED: Now we only pass the Category. 
+    // The Service handles GPS location automatically.
+    _providersFuture = _providerService.getProvidersByRole(widget.categoryName);
     
     _paymentService = PaymentService(
-      onSuccess: (paymentId) => _handlePaymentSuccess(paymentId),
-      onFailure: (error) => _handlePaymentError(error),
+      onSuccess: (pid) => _handlePaymentSuccess(pid),
+      onFailure: (err) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.red)),
     );
   }
 
@@ -38,7 +44,15 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
 
   void _startPayment(int workerId) {
     setState(() => _selectedWorkerId = workerId);
-    _paymentService.openCheckout(_standardPrice, "boss@agency.com", "9876543210");
+    
+    // SMART LOGIC:
+    // If fee is 0 (like Maids), skip payment and book directly.
+    if (widget.bookingFee == 0) {
+      _handlePaymentSuccess("FREE_BOOKING");
+    } else {
+      // If fee exists (Plumber), charge it.
+      _paymentService.openCheckout(widget.bookingFee, "boss@agency.com", "9876543210");
+    }
   }
 
   void _handlePaymentSuccess(String paymentId) async {
@@ -47,12 +61,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
     final success = await bookingService.createBooking(_selectedWorkerId!, widget.categoryName);
 
     if (mounted && success) {
-      showSuccessDialog(
-        context,
-        title: "Booking Confirmed",
-        message: "Your provider has been notified.",
-        onDismiss: () => Navigator.pop(context)
-      );
+      showSuccessDialog(context, onDismiss: () => Navigator.pop(context));
     }
   }
 
@@ -63,14 +72,40 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: Text("${widget.categoryName}s Nearby"), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black), titleTextStyle: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("${widget.categoryName}s Nearby", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(widget.bookingFee == 0 ? "Free Booking" : "Booking Fee: ₹${widget.bookingFee}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ), 
+        backgroundColor: Colors.white, 
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black)
+      ),
       body: FutureBuilder<List<dynamic>>(
         future: _providersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          
           final providers = snapshot.data ?? [];
-          if (providers.isEmpty) return const Center(child: Text("No providers found nearby."));
+          
+          if (providers.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.location_off, size: 50, color: Colors.grey[400]),
+                  const SizedBox(height: 10),
+                  const Text("No providers found nearby.", style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 5),
+                  const Text("(Try increasing range or changing location)", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+            );
+          }
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -81,9 +116,9 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
               return _ProviderCard(
                 worker: worker, 
                 category: widget.categoryName,
-                price: _standardPrice,
+                price: widget.bookingFee, 
                 onQuickBook: () => _startPayment(worker['id']),
-              );
+              ).animate().fadeIn(delay: (100 * index).ms).slideX();
             },
           );
         },
@@ -102,6 +137,10 @@ class _ProviderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Calculate distance if available (Optional UI enhancement)
+    // Note: To show "2.5 km away", you would need to calculate distance 
+    // between user loc and worker loc here using the 'geolocator' package.
+    
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -110,7 +149,7 @@ class _ProviderCard extends StatelessWidget {
             builder: (context) => ProviderPortfolioScreen(
               worker: worker, 
               category: category,
-              price: price, // Passing the price correctly now
+              price: price,
             ),
           ),
         );
@@ -120,12 +159,15 @@ class _ProviderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [BoxShadow(color: Colors.grey.shade100, blurRadius: 5, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
-            CircleAvatar(backgroundColor: Colors.blue.shade50, child: Text(worker['email'][0].toUpperCase(), style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
+            CircleAvatar(
+              radius: 24, 
+              backgroundColor: Colors.blue.shade50, 
+              child: Text(worker['email'][0].toUpperCase(), style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -133,14 +175,23 @@ class _ProviderCard extends StatelessWidget {
                 children: [
                   Text(worker['email'].split('@')[0], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  const Row(children: [Icon(Icons.star, size: 14, color: Colors.amber), Text(" 4.8", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))]),
+                  const Row(
+                    children: [
+                      Icon(Icons.star, size: 14, color: Colors.amber), 
+                      Text(" 4.8", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
+                      Text(" • Nearby", style: TextStyle(fontSize: 12, color: Colors.green)),
+                    ]
+                  ),
                 ],
               ),
             ),
             FilledButton(
               onPressed: onQuickBook,
-              style: FilledButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-              child: Text("Book ₹$price"),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.black, 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              ),
+              child: Text(price == 0 ? "Book Free" : "Book ₹$price"),
             ),
           ],
         ),

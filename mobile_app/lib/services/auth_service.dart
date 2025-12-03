@@ -48,7 +48,7 @@ class AuthService {
     }
   }
   //Registration Function
-  Future<bool> register(String email, String password, String role, String category) async {
+  Future<bool> register(String email, String password, String role, String category, String city) async {
     final url = Uri.parse('${AppConstants.baseUrl}/users');
     
     try {
@@ -59,13 +59,13 @@ class AuthService {
           'email': email, 
           'password': password,
           'role': role,
-          'service_category': category // SENDING IT HERE
+          'service_category': category,
+          'city': city // <--- SENDING CITY NOW
         }),
       );
 
       return response.statusCode == 201;
     } catch (e) {
-      print("Registration Error: $e");
       return false;
     }
   }

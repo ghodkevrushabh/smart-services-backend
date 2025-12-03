@@ -2,14 +2,26 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/constants.dart';
+import 'location_service.dart'; // Import Location Service
 
 class ProviderService {
-  Future<List<dynamic>> getProvidersByRole(String category, String city) async {
-    // 1. Get the URL (e.g., http://192.168.x.x:3000/users/role/WORKER)
-    // Note: In a real app, we would filter by 'PLUMBER', but for MVP we fetch all 'WORKERS'
-    final url = Uri.parse('${AppConstants.baseUrl}/users/role/WORKER?city=$city&category=$category');
+  
+  // UPDATED: Now we only need the category (e.g., 'Maid'). 
+  // We don't need 'city' because we will get the exact GPS location inside this function.
+  Future<List<dynamic>> getProvidersByRole(String category) async {
+    
+    // 1. Get Current GPS Location
+    // This ensures we find providers near where the user is STANDING right now.
+    final locData = await LocationService().getCurrentLocation();
+    final String lat = locData['lat'].toString();
+    final String lng = locData['lng'].toString();
+    
+    // 2. Build the URL with GPS Coordinates
+    // Old: ...?city=Mumbai&category=Maid
+    // New: ...?lat=19.12&lng=72.54&category=Maid
+    final url = Uri.parse('${AppConstants.baseUrl}/users/role/WORKER?lat=$lat&lng=$lng&category=$category');
    
-    // 2. Get the Token (ID Card)
+    // 3. Get the Token
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
@@ -23,13 +35,14 @@ class ProviderService {
       );
 
       if (response.statusCode == 200) {
-        // 3. Convert JSON List to Dart List
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load providers');
+        // If API fails, return empty list instead of crashing
+        return [];
       }
     } catch (e) {
-      throw Exception('Error: $e');
+      print("Error fetching providers: $e");
+      return [];
     }
   }
 }

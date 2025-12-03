@@ -40,8 +40,21 @@ export class UsersService {
     return this.usersRepository.findOneBy({ id });
   }
 
-  // 4. Find by Role (With City & Category Filters)
-  findByRole(role: string, city?: string, category?: string) {
+  // 4. Find by Role (SMART LOCATION SEARCH)
+  // Updated to accept Lat/Lng for GPS filtering
+  async findByRole(role: string, lat?: number, lng?: number, category?: string, city?: string) {
+    
+    // STRATEGY A: If GPS is provided, use the 10km Radius Logic (Math)
+    if (lat && lng) {
+      // Calls the 'get_nearby_providers' function inside Supabase
+      // $1=lat, $2=lng, $3=Radius(10km), $4=Role, $5=Category
+      return this.usersRepository.query(
+        'SELECT * FROM get_nearby_providers($1, $2, $3, $4, $5)',
+        [lat, lng, 10, role, category] 
+      );
+    }
+
+    // STRATEGY B: Fallback to City name (Old Method)
     const query: any = { role: role };
     
     if (city && city !== 'Unknown') {

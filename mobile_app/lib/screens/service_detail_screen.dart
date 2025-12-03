@@ -6,17 +6,17 @@ import 'provider_list_screen.dart';
 
 class ServiceDetailScreen extends StatelessWidget {
   final Map<String, dynamic> service;
-  final String userCity; // NEW: Receive the city
+  final String userCity;
 
   const ServiceDetailScreen({
     super.key, 
     required this.service, 
-    required this.userCity // NEW: Require it
+    required this.userCity
   });
 
   @override
   Widget build(BuildContext context) {
-    // Mock Portfolio Images (Keep these as network for "Gallery" feel)
+    // Mock Portfolio Images
     final List<String> portfolio = [
       "https://images.unsplash.com/photo-1581578731117-10d75d5ce3a2?auto=format&fit=crop&w=400&q=80",
       "https://images.unsplash.com/photo-1621905476017-17bf88cdad4d?auto=format&fit=crop&w=400&q=80",
@@ -33,7 +33,7 @@ class ServiceDetailScreen extends StatelessWidget {
               SliverAppBar(
                 expandedHeight: 300,
                 pinned: true,
-                backgroundColor: service['color'], // Matches the card color
+                backgroundColor: service['color'],
                 elevation: 0,
                 leading: Container(
                   margin: const EdgeInsets.all(8),
@@ -56,12 +56,12 @@ class ServiceDetailScreen extends StatelessWidget {
                   ),
                   centerTitle: true,
                   background: Hero(
-                    tag: service['name'], // Matches Home Screen Tag
+                    tag: service['name'],
                     child: Container(
-                      color: service['color'], // Background color
-                      padding: const EdgeInsets.all(40), // Padding so image isn't huge
+                      color: service['color'],
+                      padding: const EdgeInsets.all(40),
                       child: Image.asset(
-                        service['path'], // <--- FIXED: Uses Local Asset
+                        service['path'],
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -87,14 +87,16 @@ class ServiceDetailScreen extends StatelessWidget {
                                 "Starts at", 
                                 style: TextStyle(color: Colors.grey[600], fontSize: 14)
                               ),
+                              // --- UPDATED DYNAMIC PRICE LOGIC ---
                               Text(
-                                "₹499", 
+                                service['price'] == 0 ? "Free Estimate" : "₹${service['price']}", 
                                 style: TextStyle(
-                                  color: service['dark'], // Use the accent color
+                                  color: service['dark'], 
                                   fontSize: 24, 
                                   fontWeight: FontWeight.bold
                                 )
                               ),
+                              // -----------------------------------
                             ],
                           ),
                           Container(
@@ -180,7 +182,7 @@ class ServiceDetailScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(builder: (context) => ProviderListScreen(
                         categoryName: service['name'],
-                        city: userCity, // <--- FIXED: Passing City Correctly
+                        city: userCity,
                       )),
                     );
                   },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -13,15 +14,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   final _authService = AuthService();
+  
   bool _isLoading = false;
+  bool _isLocating = true; // Track if we are finding location
   
   String _selectedRole = 'CUSTOMER'; 
-  String? _selectedCategory; // Stores "Maid", "Plumber", etc.
+  String? _selectedCategory;
+  String? _detectedCity; // Will store "Pune", "Majalgaon", etc.
 
-  // The List of Jobs available in your app
   final List<String> _serviceTypes = [
     "Plumber", "Electrician", "AC Repair", "Cleaning", "Maid", "Painter"
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _detectLocation(); // Start GPS immediately
+  }
+
+  // 1. DYNAMIC GPS DETECTION
+  Future<void> _detectLocation() async {
+    setState(() => _isLocating = true);
+    
+    final loc = await LocationService().getCurrentLocation();
+    
+    if (mounted) {
+      setState(() {
+        _detectedCity = loc['city']; // e.g. "Majalgaon"
+        _isLocating = false;
+      });
+      print("📍 GPS DETECTED CITY: $_detectedCity");
+    }
+  }
 
   void _handleSignUp() async {
     if (_emailController.text.isEmpty || _passController.text.isEmpty) {
@@ -29,28 +53,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Validation: Workers MUST pick a category
     if (_selectedRole == 'WORKER' && _selectedCategory == null) {
       _showSnack("Please select your Service Category", isError: true);
       return;
     }
 
+    // STRICT CHECK: Do not allow signup if location failed
+    if (_detectedCity == null || _detectedCity == "Unknown") {
+      _showSnack("Location not found. Please enable GPS.", isError: true);
+      _detectLocation(); // Try again
+      return;
+    }
+
     setState(() => _isLoading = true);
     
+    // 2. REGISTER WITH REAL GPS CITY
     final success = await _authService.register(
       _emailController.text.trim(), 
       _passController.text.trim(),
       _selectedRole,
-      _selectedRole == 'WORKER' ? _selectedCategory! : "" // Send empty if Customer
+      _selectedRole == 'WORKER' ? _selectedCategory! : "",
+      _detectedCity! // <--- Sends "Majalgaon" (or wherever you are)
     );
 
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      _showSnack("Account Created! Please Login.", isError: false);
+      _showSnack("Account Created! You are listed in $_detectedCity.", isError: false);
       Navigator.pop(context);
     } else if (mounted) {
-      _showSnack("Registration Failed. Email might be taken.", isError: true);
+      _showSnack("Registration Failed.", isError: true);
     }
   }
 
@@ -74,7 +106,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: [
               Text("Create Account", style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text("Join our community today.", style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+              
+              // 3. SHOW DETECTED LOCATION (Proof it works)
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 5),
+                  _isLocating 
+                    ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text("Signing up from: ${_detectedCity ?? 'Unknown'}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                ],
+              ),
               
               const SizedBox(height: 30),
 
@@ -96,7 +138,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: 20),
               TextField(controller: _passController, obscureText: true, decoration: const InputDecoration(labelText: "Password", prefixIcon: Icon(Icons.lock_outline))),
 
-              // NEW: SERVICE CATEGORY DROPDOWN (Only for Workers)
+              // WORKER CATEGORY
               if (_selectedRole == 'WORKER') ...[
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(

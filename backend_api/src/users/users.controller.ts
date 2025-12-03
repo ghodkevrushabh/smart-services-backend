@@ -25,10 +25,15 @@ export class UsersController {
  @Get('role/:role')
   findByRole(
     @Param('role') role: string, 
-    @Query('city') city?: string,
-    @Query('category') category?: string // NEW PARAMETER
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('category') category?: string
   ) {
-    return this.usersService.findByRole(role, city, category);
+    // Convert strings to numbers
+    const latitude = lat ? parseFloat(lat) : undefined;
+    const longitude = lng ? parseFloat(lng) : undefined;
+    
+    return this.usersService.findByRole(role, latitude, longitude, category);
   }
 
   @Patch(':id')
